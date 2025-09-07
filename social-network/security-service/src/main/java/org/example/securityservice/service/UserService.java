@@ -13,9 +13,11 @@ import org.example.securityservice.entity.Role;
 import org.example.securityservice.entity.User;
 import org.example.securityservice.exception.AppException;
 import org.example.securityservice.exception.ErrorCode;
+import org.example.securityservice.mapper.ProfileMapper;
 import org.example.securityservice.mapper.UserMapper;
 import org.example.securityservice.repository.RoleRepository;
 import org.example.securityservice.repository.UserRepository;
+import org.example.securityservice.repository.httpclient.ProfileClient;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,6 +36,8 @@ public class UserService {
     RoleRepository roleRepository;
     UserMapper userMapper;
     PasswordEncoder passwordEncoder;
+    ProfileClient profileClient;
+    ProfileMapper profileMapper;
 
     public UserResponse createUser(UserCreationRequest request) {
         User user = userMapper.toUser(request);
@@ -43,6 +47,7 @@ public class UserService {
         roleRepository.findById(PredefinedRole.USER_ROLE).ifPresent(roles::add);
 
         user.setRoles(roles);
+        request.setUserId(user.getId());
 
         try {
             user = userRepository.save(user);
@@ -50,6 +55,8 @@ public class UserService {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
 
+        //add profile
+        profileClient.createProfile(profileMapper.toProfileCreationRequest(request));
         return userMapper.toUserResponse(user);
     }
 
