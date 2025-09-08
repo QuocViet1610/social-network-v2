@@ -21,6 +21,12 @@ import java.util.List;
 public class UserController {
     UserService userService;
 
+    @GetMapping("/send-kafka")
+    ApiResponse<Object> createUser() {
+        userService.testKafka();
+        return ApiResponse.builder().message("sucessful").build();
+    }
+
     @PostMapping
     ApiResponse<UserResponse> createUser(@RequestBody @Valid UserCreationRequest request) {
         return ApiResponse.<UserResponse>builder()

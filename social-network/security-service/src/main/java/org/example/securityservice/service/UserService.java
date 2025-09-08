@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.example.securityservice.constant.PredefinedRole;
+import org.example.securityservice.dto.NotificationEvent;
 import org.example.securityservice.dto.request.UserCreationRequest;
 import org.example.securityservice.dto.request.UserUpdateRequest;
 import org.example.securityservice.dto.response.UserResponse;
@@ -19,6 +20,7 @@ import org.example.securityservice.repository.RoleRepository;
 import org.example.securityservice.repository.UserRepository;
 import org.example.securityservice.repository.httpclient.ProfileClient;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,6 +40,11 @@ public class UserService {
     PasswordEncoder passwordEncoder;
     ProfileClient profileClient;
     ProfileMapper profileMapper;
+    KafkaTemplate kafkaTemplate;
+
+    public void testKafka(){
+        kafkaTemplate.send("topic", "key-1" , "value123123123");
+    }
 
     public UserResponse createUser(UserCreationRequest request) {
         User user = userMapper.toUser(request);
@@ -54,6 +61,15 @@ public class UserService {
         } catch (DataIntegrityViolationException exception) {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
+
+        NotificationEvent notificationEvent = NotificationEvent.builder()
+                .channel("EMAIL")
+                .recipient(request.getEmail())
+                .subject("hello")
+                .body("Hello, " + request.getUsername())
+                .build();
+
+        kafkaTemplate.send("notification-delivery", user.getEmail() , notificationEvent);
 
         //add profile
         profileClient.createProfile(profileMapper.toProfileCreationRequest(request));
